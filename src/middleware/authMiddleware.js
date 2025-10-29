@@ -9,7 +9,7 @@ const authenticate = async (req, res, next) => {
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
         status: 108,
-        message: 'Token tidak tersedia',
+        message: 'Token tidak valid atau kadaluwarsa',
         data: null
       });
     }

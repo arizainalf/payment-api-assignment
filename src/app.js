@@ -3,6 +3,7 @@ const env = require('../config/env'); // Pastikan path benar!
 const express = require('express');
 const authRoutes = require('./routes/authRoutes');
 const profileRoutes = require('./routes/profileRoutes');
+const bannerRoutes = require('./routes/bannerRoutes');
 const path = require('path');
 
 const app = express();
@@ -22,6 +23,7 @@ if (env.isDevelopment) {
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes)
+app.use('/api/banner', bannerRoutes)
 
 // Health check
 app.get('/health', (req, res) => {
@@ -33,7 +35,8 @@ app.get('/health', (req, res) => {
   });
 });
 
-// 404 handler
+app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
+
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -41,7 +44,6 @@ app.use((req, res) => {
   });
 });
 
-// Error handler (harus 4 parameter: error, req, res, next)
 app.use((error, req, res, next) => {
   console.error('Error:', error);
 
@@ -57,7 +59,5 @@ app.use((error, req, res, next) => {
 
   res.status(500).json(response);
 });
-
-app.use('/uploads', express.static(path.join(__dirname, '../../public/uploads')));
 
 module.exports = app;
