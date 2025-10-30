@@ -8,9 +8,6 @@ function generateInvoiceNumber() {
   return `INV${dateStr}-${randomNum}`;
 }
 
-// ==========================
-// GET BALANCE
-// ==========================
 const getBalance = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -43,35 +40,21 @@ const getBalance = async (req, res) => {
   }
 };
 
-// ==========================
-// TOP UP
-// ==========================
 const topUp = async (req, res) => {
   const connection = await pool.getConnection();
   try {
     const { top_up_amount } = req.validatedData;
     const userId = req.user.id;
 
-    if (!top_up_amount || top_up_amount <= 0) {
-      return res.status(400).json({
-        status: 102,
-        message: 'Parameter amount hanya boleh angka dan tidak boleh lebih kecil dari 0',
-        data: null,
-      });
-    }
-
     await connection.beginTransaction();
 
-    // Update saldo user
     await connection.execute(
       'UPDATE users SET balance = balance + ? WHERE id = ?',
       [top_up_amount, userId]
     );
 
-    // Generate invoice
     const invoiceNumber = generateInvoiceNumber();
 
-    // Insert transaksi topup
     await connection.execute(
       `INSERT INTO transactions 
         (invoice_number, user_id, transaction_type, description, total_amount) 
@@ -79,7 +62,6 @@ const topUp = async (req, res) => {
       [invoiceNumber, userId, top_up_amount]
     );
 
-    // Ambil saldo baru
     const [result] = await connection.execute(
       'SELECT balance FROM users WHERE id = ?',
       [userId]
@@ -105,9 +87,6 @@ const topUp = async (req, res) => {
   }
 };
 
-// ==========================
-// CREATE TRANSACTION (PAYMENT)
-// ==========================
 const createTransaction = async (req, res) => {
   const connection = await pool.getConnection();
   try {
@@ -116,7 +95,6 @@ const createTransaction = async (req, res) => {
 
     await connection.beginTransaction();
 
-    // Ambil service
     const [serviceRows] = await connection.execute(
       'SELECT * FROM services WHERE service_code = ? LIMIT 1',
       [service_code]
@@ -127,7 +105,6 @@ const createTransaction = async (req, res) => {
     }
     const service = serviceRows[0];
 
-    // Ambil user
     const [userRows] = await connection.execute(
       'SELECT balance FROM users WHERE id = ? LIMIT 1',
       [userId]
@@ -136,18 +113,15 @@ const createTransaction = async (req, res) => {
     if (userRows.length === 0) throw new Error('USER_NOT_FOUND');
     const user = userRows[0];
 
-    // Cek saldo
     if (user.balance < service.service_tariff) {
       throw new Error('INSUFFICIENT_BALANCE');
     }
 
-    // Kurangi saldo user
     await connection.execute(
       'UPDATE users SET balance = balance - ? WHERE id = ?',
       [service.service_tariff, userId]
     );
 
-    // Buat transaksi baru
     const invoiceNumber = generateInvoiceNumber();
     await connection.execute(
       `INSERT INTO transactions 
@@ -173,7 +147,7 @@ const createTransaction = async (req, res) => {
         service_name: service.service_name,
         transaction_type: 'PAYMENT',
         total_amount: service.service_tariff,
-        created_on: new Date(),
+        created_at: new Date(),
       },
     });
   } catch (error) {
@@ -223,21 +197,14 @@ const getTransactionHistory = async (req, res) => {
     const offsetNum = parseInt(offset) || 0;
     const limitNum = limit ? parseInt(limit) : 50;
 
-    console.log('Query:', offsetNum);
-    console.log('Params:', limitNum);
-    console.log('User Id:', userId);
-
     const [transactions] = await pool.query(
-        `
-    SELECT invoice_number, transaction_type, description, total_amount, created_on
+    `SELECT invoice_number, transaction_type, description, total_amount, created_at
     FROM transactions
     WHERE user_id = ?
-    ORDER BY created_on DESC
-    LIMIT ${limitNum} OFFSET ${offsetNum}
-    `,
+    ORDER BY created_at DESC
+    LIMIT ${limitNum} OFFSET ${offsetNum}`,
       [userId]
     );
-
 
     const [[{ total }]] = await pool.execute(
       'SELECT COUNT(*) AS total FROM transactions WHERE user_id = ?',

@@ -31,7 +31,7 @@ const getServices = async (req, res) => {
 };
 
 const createManyServices = async (req, res) => {
-  const connection = await pool.getConnection(); // pakai transaction
+  const connection = await pool.getConnection();
   try {
     const { services } = req.body;
 

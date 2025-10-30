@@ -6,6 +6,7 @@ const authenticate = async (req, res, next) => {
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('No Bearer token found');
       return res.status(401).json({
         status: 108,
         message: 'Token tidak valid atau kadaluwarsa',
@@ -14,9 +15,11 @@ const authenticate = async (req, res, next) => {
     }
 
     const token = authHeader.split(' ')[1];
+
     const decoded = verifyToken(token);
 
-    if (!decoded || !decoded.userId) {
+    if (!decoded || !decoded.email) {
+      console.log('Invalid decoded token or missing email');
       return res.status(401).json({
         status: 108,
         message: 'Token tidak valid',
@@ -24,16 +27,18 @@ const authenticate = async (req, res, next) => {
       });
     }
 
-    // Gunakan prepared statement untuk mencegah SQL Injection
+
     const [rows] = await pool.execute(
       `SELECT id, email, first_name, last_name, profile_image 
        FROM users 
-       WHERE id = ? 
+       WHERE email = ? 
        LIMIT 1`,
-      [decoded.userId]
+      [decoded.email]
     );
 
+
     if (!rows || rows.length === 0) {
+      console.log('User not found in database');
       return res.status(401).json({
         status: 108,
         message: 'User tidak ditemukan',

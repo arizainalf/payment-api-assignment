@@ -5,9 +5,8 @@ const topUpSchema = z.object({
         required_error: 'Parameter top_up_amount harus diisi',
         invalid_type_error: 'Parameter top_up_amount harus berupa angka'
     })
-    .min(1, { message: 'Parameter amount hanya boleh angka dan tidak boleh lebih kecil dari 0' })
-    .positive({ message: 'Parameter amount hanya boleh angka dan tidak boleh lebih kecil dari 0' })
-    .int({ message: 'Parameter amount hanya boleh angka bulat' })
+        .positive({ message: 'Parameter amount tidak boleh lebih kecil dari 0' })
+        .int({ message: 'Parameter amount hanya boleh angka bulat' })
 });
 
 const transactionSchema = z.object({
@@ -70,6 +69,7 @@ const validateQuery = (schema) => {
 };
 
 const validateRequest = (schema) => {
+
     return (req, res, next) => {
         if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
             return res.status(400).json({
@@ -85,14 +85,13 @@ const validateRequest = (schema) => {
             next();
         } catch (error) {
             if (error.name === 'ZodError' && Array.isArray(error.issues)) {
-                const errorDetails = error.issues.map(issue => ({
-                    field: issue.path.join('.'),
-                    message: issue.message
-                }));
+                const combinedMessage = error.issues
+                    .map(issue => issue.message)
+                    .join(', ');
 
                 return res.status(400).json({
                     status: 102,
-                    message: errorDetails,
+                    message: combinedMessage,
                     data: null
                 });
             }

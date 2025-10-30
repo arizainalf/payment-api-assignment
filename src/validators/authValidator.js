@@ -24,11 +24,8 @@ const registerSchema = z.object({
         .trim(),
 
     password: z.string()
-        .min(6, { message: 'Password minimal 6 karakter' })
+        .min(8, { message: 'Password minimal 8 karakter' })
         .max(100, { message: 'Password maksimal 100 karakter' })
-        .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, {
-            message: 'Password harus mengandung huruf kecil, huruf besar, dan angka'
-        })
 }).refine(
     (data) => {
         const pass = data.password.toLowerCase();
@@ -50,7 +47,7 @@ const loginSchema = z.object({
         .toLowerCase()
         .trim(),
     password: z.string()
-        .min(1, { message: 'Password harus diisi' })
+        .min(8, { message: 'Password harus diisi' })
 });
 
 const validateRequest = (schema) => {

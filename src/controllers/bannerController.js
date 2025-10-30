@@ -1,6 +1,5 @@
-const db = require('../../config/database'); // mysql2/promise pool
+const db = require('../../config/database'); 
 
-// ✅ Ambil semua banner
 const getBanner = async (req, res) => {
   try {
     const [banners] = await db.execute(
@@ -32,7 +31,6 @@ const getBanner = async (req, res) => {
   }
 };
 
-// ✅ Insert banyak banner (tanpa return data)
 const createManyBanners = async (req, res) => {
   try {
     const { banners } = req.body;
@@ -45,7 +43,6 @@ const createManyBanners = async (req, res) => {
       });
     }
 
-    // Validasi isi tiap objek banner
     for (const banner of banners) {
       if (!banner.banner_name || !banner.banner_image) {
         return res.status(400).json({
@@ -56,7 +53,6 @@ const createManyBanners = async (req, res) => {
       }
     }
 
-    // Siapkan query dan values untuk prepared statement
     const values = banners.map(b => [
       b.banner_name,
       b.banner_image,
@@ -84,7 +80,6 @@ const createManyBanners = async (req, res) => {
   }
 };
 
-// ✅ Insert banyak banner (dengan return data yang baru dibuat)
 const createManyBannersWithReturn = async (req, res) => {
   const conn = await db.getConnection();
   try {

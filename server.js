@@ -1,4 +1,3 @@
-// server.js
 const env = require('./config/env');
 const app = require('./src/app');
 

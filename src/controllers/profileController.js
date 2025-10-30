@@ -1,4 +1,4 @@
-const db = require('../../config/database'); // mysql2/promise pool
+const db = require('../../config/database');
 const path = require('path');
 const fs = require('fs');
 
@@ -61,7 +61,7 @@ const updateProfile = async (req, res) => {
         return res.status(409).json({
           status: 104,
           message: 'Email sudah digunakan oleh pengguna lain',
-          data: null
+          data: null,
         });
       }
     }
@@ -86,7 +86,7 @@ const updateProfile = async (req, res) => {
       return res.status(400).json({
         status: 102,
         message: 'Tidak ada data yang diupdate',
-        data: null
+        data: null,
       });
     }
 
@@ -105,27 +105,30 @@ const updateProfile = async (req, res) => {
 
     const updatedUser = updatedRows[0];
 
-    const responseData = {
-      ...updatedUser,
-      profile_image_url: updatedUser.profile_image
-        ? `${req.protocol}://${req.get('host')}/uploads/${updatedUser.profile_image}`
-        : null
-    };
+    const responseData = {};
+    if (first_name !== undefined) responseData.first_name = updatedUser.first_name;
+    if (last_name !== undefined) responseData.last_name = updatedUser.last_name;
+    if (email !== undefined) responseData.email = updatedUser.email;
+
+    if (updatedUser.profile_image) {
+      responseData.profile_image_url = `${req.protocol}://${req.get('host')}/uploads/${updatedUser.profile_image}`;
+    }
 
     return res.status(200).json({
       status: 0,
       message: 'Update Profile berhasil',
-      data: responseData
+      data: responseData,
     });
   } catch (error) {
     console.error('Update profile error:', error);
     return res.status(500).json({
       status: 500,
       message: 'Terjadi kesalahan saat memperbarui profil',
-      data: null
+      data: null,
     });
   }
 };
+
 
 const updateProfileImage = async (req, res) => {
   const conn = await db.getConnection();

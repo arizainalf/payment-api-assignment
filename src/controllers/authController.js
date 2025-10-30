@@ -29,7 +29,7 @@ const register = async (req, res) => {
     );
 
     if (env.isDevelopment) {
-      console.log('📝 New user registered:', {
+      console.log('New user registered:', {
         id: result.insertId,
         email,
         first_name,
@@ -53,7 +53,7 @@ const register = async (req, res) => {
     });
 
   }
-  
+
 };
 
 const login = async (req, res) => {
@@ -84,10 +84,10 @@ const login = async (req, res) => {
       });
     }
 
-    const token = generateToken({ userId: user.id });
+    const token = generateToken({ email: user.email });
 
     if (env.isDevelopment) {
-      console.log('🔑 User logged in:', { id: user.id, email: user.email });
+      console.log('User logged in:', { id: user.id, email: user.email });
     }
 
     res.json({
