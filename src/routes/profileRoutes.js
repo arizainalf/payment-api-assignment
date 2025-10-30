@@ -1,13 +1,13 @@
 const express = require('express');
-const { getProfile, updateProfile, updateProfileImage, getBalance } = require('../controllers/profileController');
 const { authenticate } = require('../middleware/authMiddleware');
+const { getProfile, updateProfile, updateProfileImage, getBalance } = require('../controllers/profileController');
 const { validateUpdateProfile } = require('../validators/profileValidator');
 const upload = require('../middleware/uploadMiddleware');
 
 const router = express.Router();
 
-router.get('/', authenticate, getProfile);
 router.get('/balance', authenticate, getBalance);
+router.get('/', authenticate, getProfile);
 router.put(
     '/update',
     authenticate,

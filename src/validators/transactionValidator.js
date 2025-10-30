@@ -5,9 +5,9 @@ const topUpSchema = z.object({
         required_error: 'Parameter top_up_amount harus diisi',
         invalid_type_error: 'Parameter top_up_amount harus berupa angka'
     })
-    .min(1, { message: 'Parameter amount hanya boleh angka dan tidak boleh lebih kecil dari 0' })
-    .positive({ message: 'Parameter amount hanya boleh angka dan tidak boleh lebih kecil dari 0' })
-    .int({ message: 'Parameter amount hanya boleh angka bulat' })
+        .min(1, { message: 'Parameter amount hanya boleh angka dan tidak boleh lebih kecil dari 0' })
+        .positive({ message: 'Parameter amount hanya boleh angka dan tidak boleh lebih kecil dari 0' })
+        .int({ message: 'Parameter amount hanya boleh angka bulat' })
 });
 
 const transactionSchema = z.object({
@@ -85,19 +85,16 @@ const validateRequest = (schema) => {
             next();
         } catch (error) {
             if (error.name === 'ZodError' && Array.isArray(error.issues)) {
-                const errorDetails = error.issues.map(issue => ({
-                    field: issue.path.join('.'),
-                    message: issue.message
-                }));
+                const firstError = error.issues[0];
+                const message = firstError?.message || 'Data tidak valid';
 
                 return res.status(400).json({
                     status: 102,
-                    message: errorDetails,
+                    message,
                     data: null
                 });
             }
 
-            console.error('Non-Zod validation error:', error);
             return res.status(400).json({
                 status: 102,
                 message: 'Data tidak valid',

@@ -1,12 +1,19 @@
 const env = require('../config/env');
 const express = require('express');
-const authRoutes = require('./routes/authRoutes');
-const profileRoutes = require('./routes/profileRoutes');
-const bannerRoutes = require('./routes/bannerRoutes');
-const serviceRoutes = require('./routes/serviceRoutes');
-const transactionRoutes = require('./routes/transactionRoutes');
-const path = require('path');
+const { authenticate } = require('./middleware/authMiddleware')
+const { register, login } = require('./controllers/authController');
+const { getServices, createManyServices } = require('./controllers/serviceController');
+const { getProfile, updateProfile, updateProfileImage } = require('./controllers/profileController');
+const { getBanner, createManyBanners } = require('./controllers/bannerController');
+const { getBalance, topUp, createTransaction, getTransactionHistory } = require('./controllers/transactionController');
 
+const { validateRegister, validateLogin } = require('./validators/authValidator');
+const { validateUpdateProfile } = require('./validators/profileValidator');
+const { validateTopUp, validateTransaction, validateTransactionHistory } = require('./validators/transactionValidator');
+
+const upload = require('./middleware/uploadMiddleware');
+
+const path = require('path');
 const app = express();
 
 app.use(express.json());
@@ -19,11 +26,41 @@ if (env.isDevelopment) {
   });
 }
 
-app.use('/api/auth', authRoutes);
-app.use('/api/profile', profileRoutes)
-app.use('/api/banner', bannerRoutes)
-app.use('/api/service', serviceRoutes)
-app.use('/api/transaction', transactionRoutes)
+app.post('/register', validateRegister, register);
+app.post('/login', validateLogin, login);
+
+app.get('/profile', authenticate, getProfile);
+app.put( '/profile/update', authenticate, validateUpdateProfile, updateProfile );
+app.put( '/profile/image', authenticate, upload.single('profile_image'), updateProfileImage,
+  (error, req, res, next) => {
+    if (error) {
+      const message = error.message === 'INVALID_IMAGE_FORMAT'
+        ? 'Format Image tidak sesuai'
+        : 'Terjadi kesalahan saat upload gambar';
+
+      return res.status(400).json({
+        status: 102,
+        message: message,
+        data: null
+      })
+    }
+    next();
+  }
+);
+
+app.get('/banner', getBanner );
+app.post('/banner/bulk', createManyBanners );
+
+app.get('/services', authenticate, getServices);
+app.post('/services/bulk', authenticate, createManyServices);
+
+app.get('/balance', authenticate, getBalance);
+
+app.post('/topup', authenticate, validateTopUp, topUp);
+
+app.post('/transaction', authenticate, validateTransaction, createTransaction);
+
+app.get('/transaction/history', authenticate, validateTransactionHistory, getTransactionHistory);
 
 app.get('/health', (req, res) => {
   res.json({

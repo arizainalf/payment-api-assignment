@@ -14,7 +14,6 @@ const {
     getTransactionHistory
 } = require('../controllers/transactionController');
 
-router.get('/balance', authenticate, getBalance);
 
 router.post('/topup', authenticate, validateTopUp, topUp);
 

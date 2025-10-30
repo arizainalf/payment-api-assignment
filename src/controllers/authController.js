@@ -30,8 +30,6 @@ const register = async (req, res) => {
       }
     });
 
-    const token = generateToken({ userId: user.id });
-
     if (env.isDevelopment) {
       console.log('📝 New user registered:', {
         id: user.id,
@@ -42,15 +40,8 @@ const register = async (req, res) => {
 
     res.status(201).json({
       status: 0,
-      message: 'Registrasi berhasil',
-      data: {
-        user: {
-          id: user.id,
-          email: user.email,
-          first_name: user.first_name
-        },
-        token
-      }
+      message: 'Registrasi berhasil silahkan login',
+      data: null
     });
 
   } catch (error) {
