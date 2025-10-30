@@ -82,7 +82,7 @@ app.use((error, req, res, next) => {
 
   if (env.isDevelopment) {
     response.error = error.message;
-    response.stack = error.stack;
+    response.stack = error.stack; // ← 🔴 error di sini!
   }
 
   res.status(500).json(response);
