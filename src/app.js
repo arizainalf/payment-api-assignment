@@ -26,6 +26,8 @@ if (env.isDevelopment) {
   });
 }
 
+app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
+
 app.post('/register', validateRegister, register);
 app.post('/login', validateLogin, login);
 
@@ -56,8 +58,6 @@ app.get('/health', (req, res) => {
     environment: env.env
   });
 });
-
-app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
 app.use((req, res) => {
   res.status(404).json({
