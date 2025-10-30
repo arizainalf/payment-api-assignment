@@ -1,5 +1,4 @@
-const prisma = require('../../config/database');
-const { TransactionType } = require('@prisma/client');
+const pool = require('../../config/database');
 const env = require('../../config/env');
 
 function generateInvoiceNumber() {
@@ -9,47 +8,46 @@ function generateInvoiceNumber() {
   return `INV${dateStr}-${randomNum}`;
 }
 
+// ==========================
+// GET BALANCE
+// ==========================
 const getBalance = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { balance: true }
-    });
+    const [rows] = await pool.execute(
+      'SELECT balance FROM users WHERE id = ? LIMIT 1',
+      [userId]
+    );
 
-    if (!user) {
+    if (rows.length === 0) {
       return res.status(404).json({
         status: 103,
         message: 'User tidak ditemukan',
-        data: null
+        data: null,
       });
     }
 
     return res.json({
       status: 0,
       message: 'Get Balance Berhasil',
-      data: {
-        balance: user.balance
-      }
+      data: { balance: rows[0].balance },
     });
-
   } catch (error) {
     console.error('Get balance error:', error);
-
-    if (env.isDevelopment) {
-      console.error('🔍 Full error details:', error);
-    }
-
     res.status(500).json({
       status: 500,
       message: 'Terjadi kesalahan server',
-      data: null
+      data: null,
     });
   }
 };
 
+// ==========================
+// TOP UP
+// ==========================
 const topUp = async (req, res) => {
+  const connection = await pool.getConnection();
   try {
     const { top_up_amount } = req.validatedData;
     const userId = req.user.id;
@@ -58,155 +56,136 @@ const topUp = async (req, res) => {
       return res.status(400).json({
         status: 102,
         message: 'Parameter amount hanya boleh angka dan tidak boleh lebih kecil dari 0',
-        data: null
+        data: null,
       });
     }
 
-    const result = await prisma.$transaction(async (tx) => {
-      const updatedUser = await tx.user.update({
-        where: { id: userId },
-        data: {
-          balance: {
-            increment: top_up_amount
-          }
-        },
-        select: {
-          balance: true,
-          email: true
-        }
-      });
+    await connection.beginTransaction();
 
-      const invoiceNumber = generateInvoiceNumber();
-      await tx.transaction.create({
-        data: {
-          invoice_number: invoiceNumber,
-          user_id: userId,
-          transaction_type: TransactionType.TOPUP,
-          description: 'Top Up balance',
-          total_amount: top_up_amount
-        }
-      });
+    // Update saldo user
+    await connection.execute(
+      'UPDATE users SET balance = balance + ? WHERE id = ?',
+      [top_up_amount, userId]
+    );
 
-      return updatedUser;
-    });
+    // Generate invoice
+    const invoiceNumber = generateInvoiceNumber();
 
-    if (env.isDevelopment) {
-      console.log('💰 Top up successful:', {
-        user_id: userId,
-        amount: top_up_amount,
-        new_balance: result.balance
-      });
-    }
+    // Insert transaksi topup
+    await connection.execute(
+      `INSERT INTO transactions 
+        (invoice_number, user_id, transaction_type, description, total_amount) 
+       VALUES (?, ?, 'TOPUP', 'Top Up balance', ?)`,
+      [invoiceNumber, userId, top_up_amount]
+    );
+
+    // Ambil saldo baru
+    const [result] = await connection.execute(
+      'SELECT balance FROM users WHERE id = ?',
+      [userId]
+    );
+
+    await connection.commit();
 
     return res.json({
       status: 0,
       message: 'Top Up Balance berhasil',
-      data: {
-        balance: result.balance
-      }
+      data: { balance: result[0].balance },
     });
-
   } catch (error) {
-    console.error('Topup error:', error);
-
-    if (env.isDevelopment) {
-      console.error('🔍 Full error details:', error);
-    }
-
+    await connection.rollback();
+    console.error('TopUp error:', error);
     res.status(500).json({
       status: 500,
       message: 'Terjadi kesalahan server',
-      data: null
+      data: null,
     });
+  } finally {
+    connection.release();
   }
 };
 
+// ==========================
+// CREATE TRANSACTION (PAYMENT)
+// ==========================
 const createTransaction = async (req, res) => {
+  const connection = await pool.getConnection();
   try {
     const { service_code } = req.validatedData;
     const userId = req.user.id;
 
-    const result = await prisma.$transaction(async (tx) => {
-      const service = await tx.service.findUnique({
-        where: { service_code }
-      });
+    await connection.beginTransaction();
 
-      if (!service) {
-        throw new Error('SERVICE_NOT_FOUND');
-      }
+    // Ambil service
+    const [serviceRows] = await connection.execute(
+      'SELECT * FROM services WHERE service_code = ? LIMIT 1',
+      [service_code]
+    );
 
-      const user = await tx.user.findUnique({
-        where: { id: userId }
-      });
-
-      if (!user) {
-        throw new Error('USER_NOT_FOUND');
-      }
-
-      if (user.balance < service.service_tariff) {
-        throw new Error('INSUFFICIENT_BALANCE');
-      }
-
-      await tx.user.update({
-        where: { id: userId },
-        data: {
-          balance: {
-            decrement: service.service_tariff
-          }
-        }
-      });
-
-      const invoiceNumber = generateInvoiceNumber();
-      const transaction = await tx.transaction.create({
-        data: {
-          invoice_number: invoiceNumber,
-          user_id: userId,
-          service_code: service_code,
-          transaction_type: TransactionType.PAYMENT,
-          description: service.service_name,
-          total_amount: service.service_tariff
-        }
-      });
-
-      return {
-        transaction,
-        service
-      };
-    });
-
-    if (env.isDevelopment) {
-      console.log('🛒 Transaction successful:', {
-        user_id: userId,
-        service_code: service_code,
-        amount: result.service.service_tariff
-      });
+    if (serviceRows.length === 0) {
+      throw new Error('SERVICE_NOT_FOUND');
     }
+    const service = serviceRows[0];
+
+    // Ambil user
+    const [userRows] = await connection.execute(
+      'SELECT balance FROM users WHERE id = ? LIMIT 1',
+      [userId]
+    );
+
+    if (userRows.length === 0) throw new Error('USER_NOT_FOUND');
+    const user = userRows[0];
+
+    // Cek saldo
+    if (user.balance < service.service_tariff) {
+      throw new Error('INSUFFICIENT_BALANCE');
+    }
+
+    // Kurangi saldo user
+    await connection.execute(
+      'UPDATE users SET balance = balance - ? WHERE id = ?',
+      [service.service_tariff, userId]
+    );
+
+    // Buat transaksi baru
+    const invoiceNumber = generateInvoiceNumber();
+    await connection.execute(
+      `INSERT INTO transactions 
+        (invoice_number, user_id, service_code, transaction_type, description, total_amount)
+       VALUES (?, ?, ?, 'PAYMENT', ?, ?)`,
+      [
+        invoiceNumber,
+        userId,
+        service_code,
+        service.service_name,
+        service.service_tariff,
+      ]
+    );
+
+    await connection.commit();
 
     return res.json({
       status: 0,
       message: 'Transaksi berhasil',
       data: {
-        invoice_number: result.transaction.invoice_number,
-        service_code: result.service.service_code,
-        service_name: result.service.service_name,
+        invoice_number: invoiceNumber,
+        service_code: service.service_code,
+        service_name: service.service_name,
         transaction_type: 'PAYMENT',
-        total_amount: result.service.service_tariff,
-        created_on: result.transaction.created_on
-      }
+        total_amount: service.service_tariff,
+        created_on: new Date(),
+      },
     });
-
   } catch (error) {
-    console.error('Transaction error:', error);
+    await connection.rollback();
 
-    if (env.isDevelopment) {
-      console.error('🔍 Full error details:', error);
-    }
+    console.error('Transaction error:', error.message);
 
     if (error.message === 'SERVICE_NOT_FOUND') {
       return res.status(400).json({
         status: 102,
         message: 'Service atau Layanan tidak ditemukan',
-        data: null
+        data: null,
       });
     }
 
@@ -214,7 +193,7 @@ const createTransaction = async (req, res) => {
       return res.status(400).json({
         status: 102,
         message: 'Saldo tidak mencukupi',
-        data: null
+        data: null,
       });
     }
 
@@ -222,15 +201,17 @@ const createTransaction = async (req, res) => {
       return res.status(404).json({
         status: 103,
         message: 'User tidak ditemukan',
-        data: null
+        data: null,
       });
     }
 
     res.status(500).json({
       status: 500,
       message: 'Terjadi kesalahan server',
-      data: null
+      data: null,
     });
+  } finally {
+    connection.release();
   }
 };
 
@@ -240,56 +221,45 @@ const getTransactionHistory = async (req, res) => {
     const userId = req.user.id;
 
     const offsetNum = parseInt(offset) || 0;
-    const limitNum = limit ? parseInt(limit) : undefined;
+    const limitNum = limit ? parseInt(limit) : 50;
 
-    const transactions = await prisma.transaction.findMany({
-      where: { user_id: userId },
-      select: {
-        invoice_number: true,
-        transaction_type: true,
-        description: true,
-        total_amount: true,
-        created_on: true
-      },
-      orderBy: {
-        created_on: 'desc'
-      },
-      skip: offsetNum,
-      take: limitNum
-    });
+    console.log('Query:', offsetNum);
+    console.log('Params:', limitNum);
+    console.log('User Id:', userId);
 
-    const totalRecords = await prisma.transaction.count({
-      where: { user_id: userId }
-    });
+    const [transactions] = await pool.query(
+        `
+    SELECT invoice_number, transaction_type, description, total_amount, created_on
+    FROM transactions
+    WHERE user_id = ?
+    ORDER BY created_on DESC
+    LIMIT ${limitNum} OFFSET ${offsetNum}
+    `,
+      [userId]
+    );
 
-    if (env.isDevelopment) {
-      console.log('📊 Transaction history fetched:', {
-        user_id: userId,
-        records_count: transactions.length
-      });
-    }
+
+    const [[{ total }]] = await pool.execute(
+      'SELECT COUNT(*) AS total FROM transactions WHERE user_id = ?',
+      [userId]
+    );
 
     return res.json({
       status: 0,
       message: 'Get History Berhasil',
       data: {
         offset: offsetNum,
-        limit: limitNum || totalRecords,
-        records: transactions
-      }
+        limit: limitNum,
+        total_records: total,
+        records: transactions,
+      },
     });
-
   } catch (error) {
     console.error('Get transaction history error:', error);
-
-    if (env.isDevelopment) {
-      console.error('🔍 Full error details:', error);
-    }
-
     res.status(500).json({
       status: 500,
-      message: 'Terjadi kesalahan server',
-      data: null
+      message: 'Terjadi kesalahan server' + error,
+      data: null,
     });
   }
 };
@@ -298,5 +268,5 @@ module.exports = {
   getBalance,
   topUp,
   createTransaction,
-  getTransactionHistory
+  getTransactionHistory,
 };

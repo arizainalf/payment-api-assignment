@@ -56,7 +56,8 @@ model Transaction {
   transaction_type TransactionType 
   description     String
   total_amount    Float
-  created_on      DateTime         @default(now())
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
   
   // Relasi yang diperbaiki - nama model harus sesuai
   user            User             @relation(fields: [user_id], references: [id], onDelete: Cascade)

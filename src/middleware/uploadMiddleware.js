@@ -5,33 +5,51 @@ const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png'];
 const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png'];
 
 const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'public/uploads/');
-    },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-        const ext = path.extname(file.originalname).toLowerCase();
-        cb(null, `profile-${uniqueSuffix}${ext}`);
-    }
+  destination: (req, file, cb) => {
+    cb(null, 'public/uploads/');
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `profile-${uniqueSuffix}${ext}`);
+  },
 });
 
 const fileFilter = (req, file, cb) => {
-    if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
-        return cb(new Error('INVALID_IMAGE_FORMAT'), false);
-    }
-    const ext = path.extname(file.originalname).toLowerCase();
-    if (!ALLOWED_EXTENSIONS.includes(ext)) {
-        return cb(new Error('INVALID_IMAGE_FORMAT'), false);
-    }
-    cb(null, true);
+  const ext = path.extname(file.originalname).toLowerCase();
+  if (!ALLOWED_MIME_TYPES.includes(file.mimetype) || !ALLOWED_EXTENSIONS.includes(ext)) {
+    const err = new Error('INVALID_IMAGE_FORMAT');
+    err.statusCode = 400;
+    return cb(err);
+  }
+  cb(null, true);
 };
 
 const upload = multer({
-    storage,
-    fileFilter,
-    limits: {
-        fileSize: 2 * 1024 * 1024
-    }
+  storage,
+  fileFilter,
+  limits: { fileSize: 2 * 1024 * 1024 },
 });
 
-module.exports = upload;
+const handleUpload = (req, res, next) => {
+  const singleUpload = upload.single('profile_image');
+  singleUpload(req, res, (err) => {
+    if (err) {
+      const message =
+        err.message === 'INVALID_IMAGE_FORMAT'
+          ? 'Format Image tidak sesuai'
+          : err.code === 'LIMIT_FILE_SIZE'
+          ? 'Ukuran file terlalu besar (maks. 2MB)'
+          : 'Terjadi kesalahan saat upload gambar';
+
+      return res.status(400).json({
+        status: 102,
+        message,
+        data: null,
+      });
+    }
+    next();
+  });
+};
+
+module.exports = handleUpload;

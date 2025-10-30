@@ -8,7 +8,7 @@ const server = app.listen(env.port || 8080, () => {
     console.log(`Environment: ${env.env}`);
     console.log(`Health check: http://localhost:${env.port}/health`);
     console.log('Log level: Debug');
-    console.log('Database:', env.database.url);
+    console.log('Database:', env.database.host);
   }
 });
 

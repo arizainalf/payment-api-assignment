@@ -1,5 +1,5 @@
 const { verifyToken } = require('../utils/jwt');
-const prisma = require('../../config/database');
+const pool = require('../../config/database');
 
 const authenticate = async (req, res, next) => {
   try {
@@ -24,23 +24,24 @@ const authenticate = async (req, res, next) => {
       });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
-      select: {
-        id: true,
-        email: true,
-        first_name: true,
-        last_name: true
-      }
-    });
+    // Gunakan prepared statement untuk mencegah SQL Injection
+    const [rows] = await pool.execute(
+      `SELECT id, email, first_name, last_name, profile_image 
+       FROM users 
+       WHERE id = ? 
+       LIMIT 1`,
+      [decoded.userId]
+    );
 
-    if (!user) {
+    if (!rows || rows.length === 0) {
       return res.status(401).json({
         status: 108,
         message: 'User tidak ditemukan',
         data: null
       });
     }
+
+    const user = rows[0];
 
     req.user = {
       id: user.id,

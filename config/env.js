@@ -1,4 +1,3 @@
-// config/env.js
 require('dotenv').config();
 
 const env = process.env.NODE_ENV || 'development';
@@ -13,7 +12,11 @@ const getRequiredEnv = (key) => {
 const config = {
   development: {
     database: {
-      url: process.env.DATABASE_URL || 'mysql://user:password@localhost:3306/dev_db',
+      host: process.env.DB_HOST || 'localhost',
+      port: process.env.DB_PORT || 3306,
+      user: process.env.DB_USER || 'root',
+      password: process.env.DB_PASSWORD || '',
+      name: process.env.DB_NAME || 'dev_db',
     },
     jwt: {
       secret: process.env.JWT_SECRET || 'dev-secret-key-for-development-only',
@@ -22,9 +25,14 @@ const config = {
     port: process.env.PORT || 3000,
     logLevel: 'debug',
   },
+
   production: {
     database: {
-      url: getRequiredEnv('DATABASE_URL'),
+      host: getRequiredEnv('DB_HOST'),
+      port: getRequiredEnv('DB_PORT'),
+      user: getRequiredEnv('DB_USER'),
+      password: getRequiredEnv('DB_PASSWORD'),
+      name: getRequiredEnv('DB_NAME'),
     },
     jwt: {
       secret: getRequiredEnv('JWT_SECRET'),
