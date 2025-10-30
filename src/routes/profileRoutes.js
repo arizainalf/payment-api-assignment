@@ -1,5 +1,5 @@
 const express = require('express');
-const { getProfile, updateProfile, updateProfileImage } = require('../controllers/profileController');
+const { getProfile, updateProfile, updateProfileImage, getBalance } = require('../controllers/profileController');
 const { authenticate } = require('../middleware/authMiddleware');
 const { validateUpdateProfile } = require('../validators/profileValidator');
 const upload = require('../middleware/uploadMiddleware');
@@ -7,6 +7,7 @@ const upload = require('../middleware/uploadMiddleware');
 const router = express.Router();
 
 router.get('/', authenticate, getProfile);
+router.get('/balance', authenticate, getBalance);
 router.put(
     '/update',
     authenticate,

@@ -1,11 +1,9 @@
-// src/middleware/uploadMiddleware.js
 const multer = require('multer');
 const path = require('path');
 
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png'];
 const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png'];
 
-// Konfigurasi penyimpanan
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, 'public/uploads/');
@@ -17,10 +15,9 @@ const storage = multer.diskStorage({
     }
 });
 
-// Filter hanya gambar
 const fileFilter = (req, file, cb) => {
     if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
-        return cb(new Error('INVALID_IMAGE_FORMAT'), false); // Gunakan kode error
+        return cb(new Error('INVALID_IMAGE_FORMAT'), false);
     }
     const ext = path.extname(file.originalname).toLowerCase();
     if (!ALLOWED_EXTENSIONS.includes(ext)) {

@@ -1,4 +1,3 @@
-// src/validators/authValidator.js
 const { z } = require('zod');
 
 const nameRegex = /^[a-zA-Z\s]+$/;
@@ -54,10 +53,8 @@ const loginSchema = z.object({
         .min(1, { message: 'Password harus diisi' })
 });
 
-// ✅ Validator middleware yang kompatibel dengan Zod v4
 const validateRequest = (schema) => {
     return (req, res, next) => {
-        // Pastikan body adalah objek
         if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
             return res.status(400).json({
                 status: 102,
@@ -71,11 +68,10 @@ const validateRequest = (schema) => {
             req.validatedData = validatedData;
             next();
         } catch (error) {
-            // ✅ PENANGANAN ERROR YANG BENAR UNTUK ZOD v4
             if (error.name === 'ZodError' && Array.isArray(error.issues)) {
                 const errorDetails = error.issues.map(issue => ({
-                    field: issue.path.join('.'), // misal: "first_name"
-                    message: issue.message       // pesan kustom dari schema
+                    field: issue.path.join('.'), 
+                    message: issue.message     
                 }));
 
                 return res.status(400).json({
@@ -85,7 +81,6 @@ const validateRequest = (schema) => {
                 });
             }
 
-            // Error tak terduga
             console.error('Non-Zod validation error:', error);
             return res.status(400).json({
                 status: 102,

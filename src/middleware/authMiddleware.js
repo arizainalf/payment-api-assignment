@@ -1,4 +1,3 @@
-// src/middleware/authMiddleware.js
 const { verifyToken } = require('../utils/jwt');
 const prisma = require('../../config/database');
 
@@ -43,7 +42,6 @@ const authenticate = async (req, res, next) => {
       });
     }
 
-    // Simpan data user di req.user
     req.user = {
       id: user.id,
       email: user.email,

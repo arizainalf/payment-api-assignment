@@ -1,18 +1,18 @@
 // src/app.js
-const env = require('../config/env'); // Pastikan path benar!
+const env = require('../config/env');
 const express = require('express');
 const authRoutes = require('./routes/authRoutes');
 const profileRoutes = require('./routes/profileRoutes');
 const bannerRoutes = require('./routes/bannerRoutes');
+const serviceRoutes = require('./routes/serviceRoutes');
+const transactionRoutes = require('./routes/transactionRoutes');
 const path = require('path');
 
 const app = express();
 
-// Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Development-only logging
 if (env.isDevelopment) {
   app.use((req, res, next) => {
     console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
@@ -20,12 +20,12 @@ if (env.isDevelopment) {
   });
 }
 
-// Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes)
 app.use('/api/banner', bannerRoutes)
+app.use('/api/service', serviceRoutes)
+app.use('/api/transaction', transactionRoutes)
 
-// Health check
 app.get('/health', (req, res) => {
   res.json({
     success: true,

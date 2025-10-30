@@ -2,14 +2,11 @@ const prisma = require('../../config/database');
 const bcrypt = require('bcryptjs');
 const { generateToken } = require('../utils/jwt');
 const env = require('../../config/env');
-const { v4: uuidv4 } = require('uuid');
 
 const register = async (req, res) => {
   try {
-    // Gunakan data yang sudah divalidasi
     const { email, password, first_name, last_name } = req.validatedData;
 
-    // Cek apakah email sudah terdaftar
     const existingUser = await prisma.user.findUnique({
       where: { email }
     });
@@ -26,7 +23,6 @@ const register = async (req, res) => {
 
     const user = await prisma.user.create({
       data: {
-        id: uuidv4(),
         email,
         first_name,
         last_name,

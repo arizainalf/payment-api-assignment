@@ -1,6 +1,5 @@
-// src/utils/jwt.js
 const jwt = require('jsonwebtoken');
-const config = require('../../config/env'); // Sesuaikan path jika perlu
+const config = require('../../config/env');
 
 const generateToken = (payload) => {
   return jwt.sign(payload, config.jwt.secret, {

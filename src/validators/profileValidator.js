@@ -1,4 +1,3 @@
-// src/validators/profileValidator.js
 const { z } = require('zod');
 
 const nameRegex = /^[a-zA-Z\s]+$/;
@@ -29,7 +28,6 @@ const updateProfileSchema = z.object({
 
 const validateRequest = (schema) => {
     return (req, res, next) => {
-        // Validasi body JSON (tanpa file)
         if (!req.body || typeof req.body !== 'object') {
             return res.status(400).json({
                 status: 102,
@@ -39,7 +37,6 @@ const validateRequest = (schema) => {
         }
 
         try {
-            // Parse hanya field yang diizinkan
             const validatedData = schema.parse(req.body);
             req.validatedData = validatedData;
             next();
