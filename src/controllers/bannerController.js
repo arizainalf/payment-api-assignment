@@ -2,7 +2,6 @@ const prisma = require('../../config/database');
 
 const getBanner = async (req, res) => {
     try {
-
         const banner = await prisma.banner.findMany({
             select: {
                 banner_name: true,
@@ -24,11 +23,12 @@ const getBanner = async (req, res) => {
             message: 'Sukses',
             data: banner
         });
+
     } catch (error) {
         console.error('Banner controller error:', error);
         return res.status(500).json({
             status: 500,
-            message: 'Terjadi kesalahan server',
+            message: 'Terjadi kesalahan server ' + error,
             data: null
         });
     }
@@ -58,7 +58,7 @@ const createManyBanners = async (req, res) => {
 
         const createdBanners = await prisma.banner.createMany({
             data: banners,
-            skipDuplicates: true 
+            skipDuplicates: true
         });
 
         return res.status(201).json({
