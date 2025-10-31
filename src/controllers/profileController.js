@@ -27,7 +27,7 @@ const getProfile = async (req, res) => {
       email: user.email,
       first_name: user.first_name,
       last_name: user.last_name,
-      profile_image_url: user.profile_image
+      profile_image: user.profile_image
         ? `${req.protocol}://${req.get("host")}/uploads/${user.profile_image}`
         : null,
     };
