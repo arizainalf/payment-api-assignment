@@ -44,7 +44,7 @@ const handleUpload = (req, res, next) => {
     if (err) {
       const message =
         err.message === 'INVALID_IMAGE_FORMAT'
-          ? 'Format Image tidak sesuai (hanya JPG/PNG)'
+          ? 'Format Image tidak sesuai'
           : err.code === 'LIMIT_FILE_SIZE'
           ? 'Ukuran file terlalu besar (maks. 2MB)'
           : 'Terjadi kesalahan saat upload gambar';

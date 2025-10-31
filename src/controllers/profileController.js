@@ -1,8 +1,8 @@
-const db = require('../../config/database');
-const path = require('path');
-const fs = require('fs');
+const db = require("../../config/database");
+const path = require("path");
+const fs = require("fs");
 
-const uploadDir = path.join(__dirname, '../../public/uploads');
+const uploadDir = path.join(__dirname, "../../public/uploads");
 
 const getProfile = async (req, res) => {
   try {
@@ -17,8 +17,8 @@ const getProfile = async (req, res) => {
     if (rows.length === 0) {
       return res.status(404).json({
         status: 103,
-        message: 'User tidak ditemukan',
-        data: null
+        message: "User tidak ditemukan",
+        data: null,
       });
     }
 
@@ -28,21 +28,21 @@ const getProfile = async (req, res) => {
       first_name: user.first_name,
       last_name: user.last_name,
       profile_image_url: user.profile_image
-        ? `${req.protocol}://${req.get('host')}/uploads/${user.profile_image}`
-        : null
+        ? `${req.protocol}://${req.get("host")}/uploads/${user.profile_image}`
+        : null,
     };
 
     return res.status(200).json({
       status: 0,
-      message: 'Sukses',
-      data: profile
+      message: "Sukses",
+      data: profile,
     });
   } catch (error) {
-    console.error('Profile controller error:', error);
+    console.error("Profile controller error:", error);
     return res.status(500).json({
       status: 500,
-      message: 'Terjadi kesalahan server',
-      data: null
+      message: "Terjadi kesalahan server",
+      data: null,
     });
   }
 };
@@ -50,50 +50,24 @@ const getProfile = async (req, res) => {
 const updateProfile = async (req, res) => {
   try {
     const { id: currentUserId } = req.user;
-    const { first_name, last_name, email } = req.validatedData;
-
-    if (email) {
-      const [checkEmail] = await db.execute(
-        `SELECT id FROM users WHERE email = ? LIMIT 1`,
-        [email]
-      );
-      if (checkEmail.length > 0 && checkEmail[0].id !== currentUserId) {
-        return res.status(409).json({
-          status: 104,
-          message: 'Email sudah digunakan oleh pengguna lain',
-          data: null,
-        });
-      }
-    }
+    const { first_name, last_name } = req.validatedData;
 
     const fields = [];
     const values = [];
 
     if (first_name !== undefined) {
-      fields.push('first_name = ?');
+      fields.push("first_name = ?");
       values.push(first_name);
     }
     if (last_name !== undefined) {
-      fields.push('last_name = ?');
+      fields.push("last_name = ?");
       values.push(last_name);
-    }
-    if (email !== undefined) {
-      fields.push('email = ?');
-      values.push(email);
-    }
-
-    if (fields.length === 0) {
-      return res.status(400).json({
-        status: 102,
-        message: 'Tidak ada data yang diupdate',
-        data: null,
-      });
     }
 
     values.push(currentUserId);
 
     await db.execute(
-      `UPDATE users SET ${fields.join(', ')}, updated_at = NOW() WHERE id = ?`,
+      `UPDATE users SET ${fields.join(", ")}, updated_at = NOW() WHERE id = ?`,
       values
     );
 
@@ -106,29 +80,33 @@ const updateProfile = async (req, res) => {
     const updatedUser = updatedRows[0];
 
     const responseData = {};
-    if (first_name !== undefined) responseData.first_name = updatedUser.first_name;
+    if (first_name !== undefined)
+      responseData.first_name = updatedUser.first_name;
     if (last_name !== undefined) responseData.last_name = updatedUser.last_name;
-    if (email !== undefined) responseData.email = updatedUser.email;
-
-    if (updatedUser.profile_image) {
-      responseData.profile_image_url = `${req.protocol}://${req.get('host')}/uploads/${updatedUser.profile_image}`;
+    responseData.email = updatedUser.email;
+    if (responseData.profile_image != null ) {
+      responseData.profile_image = `${req.protocol}://${req.get(
+        "host"
+      )}/uploads/${updatedUser.profile_image}`;
+    } else {
+      responseData.profile_image = updatedUser.profile_image;
+      console.log(responseData.profile_image)
     }
 
     return res.status(200).json({
       status: 0,
-      message: 'Update Profile berhasil',
+      message: "Update Profile berhasil",
       data: responseData,
     });
   } catch (error) {
-    console.error('Update profile error:', error);
+    console.error("Update profile error:", error);
     return res.status(500).json({
       status: 500,
-      message: 'Terjadi kesalahan saat memperbarui profil',
+      message: "Terjadi kesalahan saat memperbarui profil",
       data: null,
     });
   }
 };
-
 
 const updateProfileImage = async (req, res) => {
   const conn = await db.getConnection();
@@ -138,8 +116,8 @@ const updateProfileImage = async (req, res) => {
     if (!req.file) {
       return res.status(400).json({
         status: 102,
-        message: 'File gambar wajib diupload',
-        data: null
+        message: "Field file tidak boleh kosong",
+        data: null,
       });
     }
 
@@ -166,17 +144,19 @@ const updateProfileImage = async (req, res) => {
       }
     }
 
-    oldRows[0].profile_image = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+    oldRows[0].profile_image = `${req.protocol}://${req.get("host")}/uploads/${
+      req.file.filename
+    }`;
 
     return res.status(200).json({
       status: 0,
-      message: 'Foto profil berhasil diperbarui',
-      data: oldRows[0]
+      message: "Update Profile Image berhasil",
+      data: oldRows[0],
     });
   } catch (error) {
     await conn.rollback();
 
-    console.error('Update profile image error:', error);
+    console.error("Update profile image error:", error);
 
     if (req.file) {
       const tempPath = path.join(uploadDir, req.file.filename);
@@ -186,9 +166,9 @@ const updateProfileImage = async (req, res) => {
     }
 
     return res.status(500).json({
-      status: 500,
-      message: 'Terjadi kesalahan saat mengupload foto profil',
-      data: null
+      status: 400,
+      message: "Terjadi kesalahan saat mengupload foto profil",
+      data: null,
     });
   } finally {
     conn.release();
@@ -198,5 +178,5 @@ const updateProfileImage = async (req, res) => {
 module.exports = {
   getProfile,
   updateProfile,
-  updateProfileImage
+  updateProfileImage,
 };

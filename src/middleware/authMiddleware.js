@@ -22,11 +22,10 @@ const authenticate = async (req, res, next) => {
       console.log('Invalid decoded token or missing email');
       return res.status(401).json({
         status: 108,
-        message: 'Token tidak valid',
+        message: 'Token tidak valid atau kadaluwarsa',
         data: null
       });
     }
-
 
     const [rows] = await pool.execute(
       `SELECT id, email, first_name, last_name, profile_image 
@@ -36,12 +35,11 @@ const authenticate = async (req, res, next) => {
       [decoded.email]
     );
 
-
     if (!rows || rows.length === 0) {
       console.log('User not found in database');
       return res.status(401).json({
         status: 108,
-        message: 'User tidak ditemukan',
+        message: 'Email atau password salah',
         data: null
       });
     }

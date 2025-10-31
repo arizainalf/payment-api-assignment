@@ -23,7 +23,7 @@ const getServices = async (req, res) => {
   } catch (error) {
     console.error('Service controller error:', error);
     return res.status(500).json({
-      status: 500,
+      status: 400,
       message: 'Terjadi kesalahan server',
       data: null,
     });

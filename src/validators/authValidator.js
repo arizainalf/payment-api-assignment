@@ -1,94 +1,129 @@
-const { z } = require('zod');
+const { z } = require("zod");
 
 const nameRegex = /^[a-zA-Z\s]+$/;
 
-const registerSchema = z.object({
-    first_name: z.string()
-        .min(3, { message: 'Nama depan minimal 3 karakter' })
-        .max(100, { message: 'Nama depan maksimal 100 karakter' })
-        .regex(nameRegex, { message: 'Nama depan hanya boleh huruf dan spasi' })
-        .trim(),
+const registerSchema = z
+  .object({
+    email: z
+      .string({
+        required_error: "Parameter email harus di isi",
+      })
+      .min(1,{message: "Parameter email harus di isi"})
+      .email({ message: "Parameter email tidak sesuai format" })
+      .toLowerCase()
+      .trim(),
 
-    last_name: z.string()
-        .min(1, { message: 'Nama belakang minimal 1 karakter' })
-        .max(100, { message: 'Nama belakang maksimal 100 karakter' })
-        .regex(nameRegex, { message: 'Nama belakang hanya boleh huruf dan spasi' })
-        .trim()
-        .optional(),
+    first_name: z
+      .string({
+        required_error: "Parameter first_name harus di isi",
+      })
+      .min(1, { message: "Parameter first_name harus di isi" })
+      .max(100, { message: "Parameter first_name maksimal 100 karakter" })
+      .regex(nameRegex, { message: "Nama depan hanya boleh huruf dan spasi" })
+      .trim(),
 
-    email: z.string()
-        .email({ message: 'Parameter email tidak sesuai format' })
-        .min(1, { message: 'Email harus diisi' })
-        .max(255, { message: 'Email terlalu panjang' })
-        .toLowerCase()
-        .trim(),
+    last_name: z
+      .string({
+        required_error: "Parameter last_name harus di isi",
+      })
+      .trim()
+      .min(1, { message: "Parameter last_name harus di isi" })
+      .max(100, { message: "Parameter last_name maksimal 100 karakter" })
+      .regex(nameRegex, {
+        message: "Nama belakang hanya boleh huruf dan spasi",
+      }),
 
-    password: z.string()
-        .min(8, { message: 'Password minimal 8 karakter' })
-        .max(100, { message: 'Password maksimal 100 karakter' })
-}).refine(
+    password: z
+      .string({
+        required_error: "Parameter password harus di isi",
+      })
+      .min(8, { message: "Password length minimal 8 karakter" })
+      .max(20, { message: "Password length maksimal 20 karakter" }),
+  })
+  .refine(
     (data) => {
-        const pass = data.password.toLowerCase();
-        const first = data.first_name.toLowerCase();
-        const last = data.last_name?.toLowerCase() || '';
-        const full = `${first} ${last}`.trim();
-        return pass !== first && pass !== full && (last ? pass !== last : true);
+      const pass = data.password.toLowerCase();
+      const first = data.first_name.toLowerCase();
+      const last = data.last_name?.toLowerCase() || "";
+      const full = `${first} ${last}`.trim();
+      return pass !== first && pass !== full && (last ? pass !== last : true);
     },
     {
-        message: 'Password tidak boleh sama dengan nama Anda',
-        path: ['password']
+      message: "Password tidak boleh sama dengan nama Anda",
+      path: ["password"],
     }
-);
+  );
 
 const loginSchema = z.object({
-    email: z.string()
-        .email({ message: 'Format email tidak valid' })
-        .min(1, { message: 'Email harus diisi' })
-        .toLowerCase()
-        .trim(),
-    password: z.string()
-        .min(8, { message: 'Password harus diisi' })
+  email: z
+    .string({
+      required_error: "Parameter email harus di isi",
+    })
+    .min(1,{message:"Parameter email harus di isi"})
+    .email({ message: "Parameter email tidak sesuai format" })
+    .toLowerCase()
+    .trim(),
+
+  password: z
+    .string({
+      required_error: "Parameter password harus di isi",
+    })
+    .min(1, { message: "Parameter password harus di isi" }),
 });
 
 const validateRequest = (schema) => {
-    return (req, res, next) => {
-        if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
-            return res.status(400).json({
-                status: 102,
-                message: 'Body harus berupa objek JSON',
-                data: null
-            });
+  return (req, res, next) => {
+    if (!req.body || typeof req.body !== "object" || Array.isArray(req.body)) {
+      return res.status(400).json({
+        status: 102,
+        message: "Body harus berupa objek JSON",
+        data: null,
+      });
+    }
+
+    try {
+      const validatedData = schema.parse(req.body);
+      req.validatedData = validatedData;
+      next();
+    } catch (error) {
+      if (error.name === "ZodError" && Array.isArray(error.issues)) {
+        const firstIssue = { ...error.issues[0] };
+
+        if (
+          firstIssue.code === "invalid_type" ||
+          firstIssue.received === "undefined" ||
+          firstIssue.expected === "string"
+        ) {
+          const requiredMessages = {
+            first_name: "Parameter first_name harus di isi",
+            last_name: "Parameter last_name harus di isi",
+            email: "Parameter email harus di isi",
+            password: "Parameter password harus di isi",
+          };
+          const field = firstIssue.path[0];
+          if (field && requiredMessages[field]) {
+            firstIssue.message = requiredMessages[field];
+          }
         }
 
-        try {
-            const validatedData = schema.parse(req.body);
-            req.validatedData = validatedData;
-            next();
-        } catch (error) {
-            if (error.name === 'ZodError' && Array.isArray(error.issues)) {
-                const errorDetails = error.issues.map(issue => ({
-                    field: issue.path.join('.'), 
-                    message: issue.message     
-                }));
+        return res.status(400).json({
+          status: 102,
+          message: firstIssue.message,
+          data: null,
+        });
+      }
 
-                return res.status(400).json({
-                    status: 102,
-                    message: errorDetails,
-                    data: null
-                });
-            }
-
-            console.error('Non-Zod validation error:', error);
-            return res.status(400).json({
-                status: 102,
-                message: 'Data tidak valid',
-                data: null
-            });
-        }
-    };
+      console.error("Non-Zod validation error:", error);
+      return res.status(400).json({
+        status: 102,
+        message: "Data tidak valid",
+        data: null,
+      });
+    }
+  };
 };
 
 module.exports = {
-    validateRegister: validateRequest(registerSchema),
-    validateLogin: validateRequest(loginSchema)
+  validateRegister: validateRequest(registerSchema),
+  validateLogin: validateRequest(loginSchema),
 };

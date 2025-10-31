@@ -28,7 +28,7 @@ if (env.isDevelopment) {
 
 app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
-app.post('/register', validateRegister, register);
+app.post('/registration', validateRegister, register);
 app.post('/login', validateLogin, login);
 
 app.get('/profile', authenticate, getProfile);

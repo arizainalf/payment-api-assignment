@@ -47,7 +47,7 @@ const register = async (req, res) => {
     console.error('Register error:', error);
 
     res.status(500).json({
-      status: 500,
+      status: 400,
       message: 'Terjadi kesalahan server',
       data: null,
     });
@@ -94,11 +94,6 @@ const login = async (req, res) => {
       status: 0,
       message: 'Login sukses',
       data: {
-        user: {
-          id: user.id,
-          email: user.email,
-          name: `${user.first_name} ${user.last_name || ''}`.trim(),
-        },
         token,
       },
     });
