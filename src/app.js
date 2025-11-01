@@ -37,7 +37,7 @@ app.put( '/profile/update', authenticate, validateUpdateProfile, updateProfile )
 app.put('/profile/image', authenticate, handleUpload, updateProfileImage);
 
 app.get('/banner', getBanner );
-app.post('/banner/bulk', createManyBanners );
+app.post('/banner/bulk', authenticate, createManyBanners );
 
 app.get('/services', authenticate, getServices);
 app.post('/services/bulk', authenticate, createManyServices);
